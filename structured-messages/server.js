@@ -5,6 +5,7 @@ const server = new WebSocket.Server({ port: 8080 });
 
 server.on("connection", (socket) => {
   console.log("A client connected!");
+  console.log("Connected clients:", server.clients.size);
 
  
 socket.on("message", (message) => {
@@ -38,6 +39,7 @@ socket.on("message", (message) => {
 
   socket.on("close", () => {
     console.log("Client disconnected");
+     console.log("Connected clients:", server.clients.size);
   });
 });
 

@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<body>
+  <h2>Simple WebSocket Chat</h2>
+
+  <input id="username" placeholder="Your username" value="Alice">
+  <input id="message" placeholder="Type a message">
+  <button id="send">Send</button>
+
+  <p id="status">Connecting...</p>
+  <ul id="messages"></ul>
+
+  <script>
+  let socket ;
+  let reconnectTimer;
+
+    const username = document.getElementById("username");
+    const message = document.getElementById("message");
+    const button = document.getElementById("send");
+    const status = document.getElementById("status");
+    const messages = document.getElementById("messages");
+
+function connect() {
+  socket = new WebSocket("ws://localhost:8080");
+
+  socket.onopen = () => {
+    status.textContent = "Connected!";
+  };
+  
+   button.onclick = () => {
+      if (socket.readyState !== WebSocket.OPEN) return;
+
+      socket.send(JSON.stringify({
+        username: username.value,
+        text: message.value
+      }));
+
+      message.value = "";
+    };
+
+  socket.onmessage = (event) => {
+    const chatMessage = JSON.parse(event.data);
+    const item = document.createElement("li");
+
+    item.textContent =
+      chatMessage.username + ": " + chatMessage.text;
+
+    messages.appendChild(item);
+  };
+
+  socket.onclose = () => {
+    status.textContent = "Disconnected. Reconnecting...";
+
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 2000);
+  };
+
+  socket.onerror = () => {
+    status.textContent = "Connection error";
+  };
+}
+
+connect();
+  </script>
+</body>
+</html>
