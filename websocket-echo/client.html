@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h2>Websocket echo test </h2>
+    <button id="send">Send Message</button>
+     <p id="status">Connecting...</p>
+     <p id="reply"></p>
+
+
+     <script>
+        const socket=new  WebSocket("ws://localhost:8080")  ;
+
+    const status = document.getElementById("status");
+    const reply = document.getElementById("reply");
+    const button = document.getElementById("send");         
+
+     socket.onopen = () => {
+      status.textContent = "Connected!";
+    };
+
+    button.onclick = () => {
+      socket.send("Hello server!");
+    };
+
+    socket.onmessage = (event) => {
+      reply.textContent = event.data;
+    };
+
+    socket.onclose = () => {
+      status.textContent = "Disconnected";
+    };
+
+    socket.onerror = () => {
+      status.textContent = "Connection error";
+    };
+     </script>
+    
+</body>
+</html>
