@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple WebSocket Chat</title>
+</head>
+
+<body>
+  <h2>Simple WebSocket Chat</h2>
+
+  <!-- Username and connection controls -->
+  <div>
+    <label for="username">Username:</label>
+    <input
+      id="username"
+      type="text"
+      placeholder="Enter username"
+      maxlength="30"
+    />
+
+    <button id="connectButton">Connect</button>
+
+    <p id="status">Not connected</p>
+  </div>
+
+  <hr>
+
+  <!-- Message controls -->
+  <div>
+    <input
+      id="message"
+      type="text"
+      placeholder="Type a message"
+      maxlength="2000"
+    />
+
+    <button id="send">Send</button>
+  </div>
+
+  <h3>Messages</h3>
+  <ul id="messages"></ul>
+
+  <script>
+    let socket = null;
+    let reconnectTimer = null;
+    let currentUsername = "";
+    let shouldReconnect = false;
+
+    const usernameInput = document.getElementById("username");
+    const messageInput = document.getElementById("message");
+    const sendButton = document.getElementById("send");
+    const connectButton = document.getElementById("connectButton");
+    const status = document.getElementById("status");
+    const messages = document.getElementById("messages");
+
+    // Establish a WebSocket connection.
+    function connect() {
+      if (!currentUsername) return;
+
+      // Avoid creating duplicate connections.
+      if (
+        socket &&
+        (
+          socket.readyState === WebSocket.CONNECTING ||
+          socket.readyState === WebSocket.OPEN
+        )
+      ) {
+        return;
+      }
+
+      clearTimeout(reconnectTimer);
+
+      const url =
+        "ws://localhost:8080?username=" +
+        encodeURIComponent(currentUsername);
+
+      console.log("Creating WebSocket connection");
+
+      socket = new WebSocket(url);
+
+      status.textContent = "Connecting...";
+
+      // Connection established.
+      socket.onopen = () => {
+        status.textContent = "Connected as " + currentUsername;
+        console.log("WebSocket connected");
+      };
+
+      // Receive messages from the server.
+      socket.onmessage = (event) => {
+        try {
+          const chatMessage = JSON.parse(event.data);
+
+          const item = document.createElement("li");
+
+          item.textContent =
+            chatMessage.username + ": " + chatMessage.text;
+
+          messages.appendChild(item);
+        } catch (error) {
+          console.log("Invalid message received from server");
+        }
+      };
+
+      // Connection closed.
+      socket.onclose = () => {
+        console.log("WebSocket disconnected");
+
+        if (shouldReconnect && currentUsername) {
+          status.textContent = "Disconnected. Reconnecting...";
+
+          clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(connect, 2000);
+        } else {
+          status.textContent = "Disconnected";
+        }
+      };
+
+      // Connection error.
+      socket.onerror = () => {
+        status.textContent = "Connection error";
+      };
+    }
+
+    // Connect only when the user clicks the Connect button.
+    connectButton.onclick = () => {
+      const name = usernameInput.value.trim();
+
+      if (!name) {
+        status.textContent = "Please enter a username";
+        return;
+      }
+
+      if (name.length > 30) {
+        status.textContent = "Username must be 30 characters or fewer";
+        return;
+      }
+
+      if (
+        socket &&
+        (
+          socket.readyState === WebSocket.CONNECTING ||
+          socket.readyState === WebSocket.OPEN
+        )
+      ) {
+        status.textContent =
+          "Already connected. Use one username per tab.";
+        return;
+      }
+
+      currentUsername = name;
+      shouldReconnect = true;
+
+      connect();
+    };
+
+    // Send a message through the open WebSocket.
+    function sendMessage() {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        status.textContent = "Connect before sending messages";
+        return;
+      }
+
+      const text = messageInput.value.trim();
+
+      if (!text) return;
+
+      socket.send(JSON.stringify({ text }));
+
+      messageInput.value = "";
+      messageInput.focus();
+    }
+
+    sendButton.onclick = sendMessage;
+
+    // Allow Enter to send a message.
+    messageInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
