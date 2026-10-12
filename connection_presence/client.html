@@ -22,17 +22,18 @@
     const messages = document.getElementById("messages");
 
 function connect() {
-  socket = new WebSocket("ws://localhost:8080");
+  console.log("Creating WebSocket connection");
+  socket = new WebSocket("ws://localhost:8080?username=Alice");
 
   socket.onopen = () => {
     status.textContent = "Connected!";
   };
-  
+
    button.onclick = () => {
       if (socket.readyState !== WebSocket.OPEN) return;
 
       socket.send(JSON.stringify({
-        username: username.value,
+       
         text: message.value
       }));
 
