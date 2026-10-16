@@ -3,6 +3,23 @@ const WebSocket = require("ws");
 
 const server = new WebSocket.Server({ port: 8080 });
 
+const connectionsByUser=new Map();
+
+function broadcastOnlineUsers() {
+  const onlineUsers = Array.from(connectionsByUser.keys());
+
+  const message = JSON.stringify({
+    type: "onlineUsers",
+    users: onlineUsers
+  });
+
+  server.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
 server.on("connection", (socket, request) => {
   // Read the username from the connection URL.
   const url = new URL(
@@ -24,6 +41,21 @@ server.on("connection", (socket, request) => {
 
   // Associate the username with this connection.
   socket.username = username.trim();
+  const name = socket.username;
+
+if (!connectionsByUser.has(name)) {
+  connectionsByUser.set(name, new Set());
+}
+
+connectionsByUser.get(name).add(socket);
+const onlineUsers = Array.from(connectionsByUser.keys());
+broadcastOnlineUsers();
+
+console.log("Online users:", onlineUsers);
+console.log(
+  "Connections for " + name + ":",
+  connectionsByUser.get(name).size
+);
 
   console.log("Connected user:", socket.username);
   console.log("Connected clients:", server.clients.size);
@@ -60,10 +92,28 @@ server.on("connection", (socket, request) => {
   });
 
   // Track disconnections.
-  socket.on("close", () => {
-    console.log("Disconnected user:", socket.username);
-    console.log("Connected clients:", server.clients.size);
-  });
+  
+socket.on("close", () => {
+  const name = socket.username;
+  const userConnections = connectionsByUser.get(name);
+
+  if (userConnections) {
+    userConnections.delete(socket);
+
+    if (userConnections.size === 0) {
+      connectionsByUser.delete(name);
+    }
+  }
+  broadcastOnlineUsers();
+  const onlineUsers = Array.from(connectionsByUser.keys());
+
+console.log("Online users:", onlineUsers);
+
+  console.log("Disconnected user:", name);
+  console.log("Connections for this user:", userConnections?.size ?? 0);
+  console.log("Connected clients:", server.clients.size);
+});
+
 
   socket.on("error", (error) => {
     console.log("Socket error:", error.message);

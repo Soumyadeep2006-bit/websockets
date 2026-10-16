@@ -39,6 +39,9 @@
     <button id="send">Send</button>
   </div>
 
+  <h3>Online users</h3>
+<ul id="onlineUsers"></ul>
+
   <h3>Messages</h3>
   <ul id="messages"></ul>
 
@@ -54,6 +57,7 @@
     const connectButton = document.getElementById("connectButton");
     const status = document.getElementById("status");
     const messages = document.getElementById("messages");
+    const onlineUsersList = document.getElementById("onlineUsers");
 
     // Establish a WebSocket connection.
     function connect() {
@@ -89,20 +93,31 @@
       };
 
       // Receive messages from the server.
-      socket.onmessage = (event) => {
-        try {
-          const chatMessage = JSON.parse(event.data);
+      
+socket.onmessage = (event) => {
+  try {
+    const data = JSON.parse(event.data);
 
-          const item = document.createElement("li");
+    if (data.type === "onlineUsers") {
+      onlineUsersList.replaceChildren();
 
-          item.textContent =
-            chatMessage.username + ": " + chatMessage.text;
+      data.users.forEach((username) => {
+        const item = document.createElement("li");
+        item.textContent = username;
+        onlineUsersList.appendChild(item);
+      });
 
-          messages.appendChild(item);
-        } catch (error) {
-          console.log("Invalid message received from server");
-        }
-      };
+      return;
+    }
+
+    const item = document.createElement("li");
+    item.textContent = data.username + ": " + data.text;
+    messages.appendChild(item);
+  } catch (error) {
+    console.log("Invalid message received from server");
+  }
+};
+
 
       // Connection closed.
       socket.onclose = () => {
